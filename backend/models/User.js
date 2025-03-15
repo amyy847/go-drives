@@ -3,11 +3,14 @@ const mongoose = require("mongoose");
 const UserSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
+  username: { type: String, required: true, unique: true },
   gucEmail: { type: String, required: true, unique: true },
   phoneNumber: String,
   idNumber: String,
   idPicture: String, // Cloudinary URL
-  role: { type: String, enum: ["user", "admin"], default: "user" },
+  password: { type: String, required: true },
+  major: String,
+  role: { type: String, default: "user" },
   isApproved: { type: Boolean, default: false }
 });
 

@@ -1,10 +1,7 @@
 const express = require("express");
-const { approveUser, getUsers } = require("../controllers/adminController");
-const { authenticate, isAdmin } = require("../utils/middleware");
-
+const { approveUser } = require("../controllers/authController");
 const router = express.Router();
 
-router.get("/users", authenticate, isAdmin, getUsers);
-router.put("/approve/:id", authenticate, isAdmin, approveUser);
+router.put("/approve/:userId", approveUser);
 
 module.exports = router;

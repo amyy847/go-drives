@@ -1,6 +1,5 @@
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
 require("dotenv").config();
 
 // Configure Cloudinary
@@ -10,9 +9,9 @@ cloudinary.config({
   api_secret: process.env.CLOUD_API_SECRET,
 });
 
-// Fix: Use the correct Multer-Cloudinary storage method
-const storage = multer.diskStorage({});
-
-const upload = multer({ storage });
-
+// Configure Multer to handle a single image upload (field name must match frontend)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
+});
 module.exports = { cloudinary, upload };

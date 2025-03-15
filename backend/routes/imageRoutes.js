@@ -1,10 +1,8 @@
 const express = require("express");
-const { upload } = require("../utils/cloudinary"); // Import Multer setup
-const { uploadImage } = require("../controllers/imageController");
+const { upload, uploadImage } = require("../controllers/imageController");
 
 const router = express.Router();
 
-// Upload Image Route
-router.post("/upload", upload.single("image"), uploadImage);
+router.post("/upload", upload.single("idPicture"), uploadImage);
 
 module.exports = router;
