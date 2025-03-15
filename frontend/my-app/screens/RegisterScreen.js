@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
-import { registerUser, uploadImage as uploadImageToCloudinary } from "../api"; // ✅ Rename import
+import { registerUser, uploadImage as uploadImageToCloudinary , registerAdmin, registerCar} from "../api"; // ✅ Rename import
 import * as ImageManipulator from "expo-image-manipulator";
 
 const RegisterScreen = ({ navigation }) => {
@@ -26,7 +26,7 @@ const RegisterScreen = ({ navigation }) => {
   const [idPicture, setIdPicture] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("user"); // Default role
+  const [role, setRole] = useState(""); // Role selection
 
   // Handle email input & auto-generate username
   const handleEmailChange = (email) => {
@@ -79,28 +79,33 @@ const RegisterScreen = ({ navigation }) => {
     }
   };
   
-  
-
   const handleRegister = async () => {
     try {
-      const response = await axios.post(
-        "http://192.168.100.88:5000/api/auth/register",
-        {
+      let response;
+      if (role === "user") {
+        response = await registerUser({
           firstName,
           lastName,
           username,
           gucEmail,
           phoneNumber,
           idNumber,
-          idPicture: "https://dummyimage.com/600x400/000/fff&text=Dummy+ID", // ✅ Ensure it's a string
+          idPicture: "https://dummyimage.com/600x400/000/fff&text=Dummy+ID",
           password,
-          role,
           major,
-        },
-        {
-          headers: { "Content-Type": "application/json" }, // ✅ Ensure JSON is used
-        }
-      );
+        });
+      } else if (role === "car") {
+        response = await registerCar({
+          username,
+          password,
+        });
+      } else if (role === "admin") {
+        response = await registerAdmin({
+          email: gucEmail,
+          username,
+          password,
+        });
+      }
   
       Alert.alert("Success", "Registration successful. Awaiting admin approval.");
       navigation.navigate("Login");
@@ -110,31 +115,62 @@ const RegisterScreen = ({ navigation }) => {
     }
   };
   
+  const validateIdNumber = (idNumber) => {
+    const idPattern = /^(55|52|49|46|43|40|37|34|31|28|25|22|19|16|13|10|07|04|01|58|61|64)-\d{4,5}$/;
+    return idPattern.test(idNumber);
+  };
+
+  const validatePhoneNumber = (phoneNumber) => {
+    const phonePattern = /^\d{11}$/;
+    return phonePattern.test(phoneNumber);
+  };
 
   const validateStep1 = () => {
-    if (!gucEmail || !idNumber) {
-      Alert.alert("Validation Error", "Please fill in all fields.");
-      return false;
-    }
-    if (!gucEmail.includes("@student.guc.edu.eg")) {
-      Alert.alert("Validation Error", "Please enter a valid GUC email.");
+    if (!role) {
+      Alert.alert("Validation Error", "Please select a role.");
       return false;
     }
     return true;
   };
 
   const validateStep2 = () => {
-    if (!firstName || !lastName || !major || !phoneNumber) {
-      Alert.alert("Validation Error", "Please fill in all fields.");
-      return false;
+    if (role === "user") {
+      if (!gucEmail || !idNumber) {
+        Alert.alert("Validation Error", "Please fill in all fields.");
+        return false;
+      }
+      if (!gucEmail.includes("@student.guc.edu.eg")) {
+        Alert.alert("Validation Error", "Please enter a valid GUC email.");
+        return false;
+      }
+      if (!validateIdNumber(idNumber)) {
+        Alert.alert("Validation Error", "Please enter a valid ID Number (e.g., 55-12345).");
+        return false;
+      }
+    } else if (role === "car") {
+      if (!username || !password) {
+        Alert.alert("Validation Error", "Please fill in all fields.");
+        return false;
+      }
+    } else if (role === "admin") {
+      if (!gucEmail || !username || !password) {
+        Alert.alert("Validation Error", "Please fill in all fields.");
+        return false;
+      }
     }
     return true;
   };
 
   const validateStep3 = () => {
-    if (!idPicture) {
-      Alert.alert("Validation Error", "Please upload an ID picture.");
-      return false;
+    if (role === "user") {
+      if (!firstName || !lastName || !major || !phoneNumber) {
+        Alert.alert("Validation Error", "Please fill in all fields.");
+        return false;
+      }
+      if (!validatePhoneNumber(phoneNumber)) {
+        Alert.alert("Validation Error", "Please enter a valid 11-digit phone number.");
+        return false;
+      }
     }
     return true;
   };
@@ -145,20 +181,39 @@ const RegisterScreen = ({ navigation }) => {
 
       {step === 1 && (
         <>
-          <TextInput style={styles.input} placeholder="GUC Email" value={gucEmail} onChangeText={handleEmailChange} />
-          <TextInput style={styles.input} placeholder="ID Number" value={idNumber} onChangeText={setIdNumber} />
+          <Text style={styles.label}>Select Role</Text>
+          <TouchableOpacity style={styles.roleButton} onPress={() => setRole("user")}>
+            <Text style={styles.buttonText}>User</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.roleButton} onPress={() => setRole("car")}>
+            <Text style={styles.buttonText}>Car</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.roleButton} onPress={() => setRole("admin")}>
+            <Text style={styles.buttonText}>Admin</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={() => validateStep1() && setStep(2)}>
             <Text style={styles.buttonText}>Next</Text>
           </TouchableOpacity>
         </>
       )}
 
-      {step === 2 && (
+      {step === 2 && role === "user" && (
         <>
-          <TextInput style={styles.input} placeholder="First Name" value={firstName} onChangeText={setFirstName} />
-          <TextInput style={styles.input} placeholder="Last Name" value={lastName} onChangeText={setLastName} />
-          <TextInput style={styles.input} placeholder="Major" value={major} onChangeText={setMajor} />
-          <TextInput style={styles.input} placeholder="Phone Number" value={phoneNumber} onChangeText={setPhoneNumber} />
+          <TextInput style={styles.input} placeholder="GUC Email" value={gucEmail} onChangeText={handleEmailChange} />
+          <TextInput style={styles.input} placeholder="ID Number" value={idNumber} onChangeText={setIdNumber} />
+          <TouchableOpacity style={styles.button} onPress={() => validateStep2() && setStep(3)}>
+            <Text style={styles.buttonText}>Next</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.smallButton} onPress={() => setStep(1)}>
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {step === 2 && role === "car" && (
+        <>
+          <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} />
+          <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
           <TouchableOpacity style={styles.button} onPress={() => validateStep2() && setStep(4)}>
             <Text style={styles.buttonText}>Next</Text>
           </TouchableOpacity>
@@ -168,12 +223,26 @@ const RegisterScreen = ({ navigation }) => {
         </>
       )}
 
-      {/* {step === 3 && (
+      {step === 2 && role === "admin" && (
         <>
-          <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-            <Text style={styles.buttonText}>{uploading ? "Uploading..." : "Upload ID Picture"}</Text>
+          <TextInput style={styles.input} placeholder="GUC Email" value={gucEmail} onChangeText={handleEmailChange} />
+          <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} />
+          <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+          <TouchableOpacity style={styles.button} onPress={() => validateStep2() && setStep(4)}>
+            <Text style={styles.buttonText}>Next</Text>
           </TouchableOpacity>
-          {idPicture && <Image source={{ uri: idPicture }} style={styles.imagePreview} />}
+          <TouchableOpacity style={styles.smallButton} onPress={() => setStep(1)}>
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {step === 3 && role === "user" && (
+        <>
+          <TextInput style={styles.input} placeholder="First Name" value={firstName} onChangeText={setFirstName} />
+          <TextInput style={styles.input} placeholder="Last Name" value={lastName} onChangeText={setLastName} />
+          <TextInput style={styles.input} placeholder="Major" value={major} onChangeText={setMajor} />
+          <TextInput style={styles.input} placeholder="Phone Number" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="numeric" />
           <TouchableOpacity style={styles.button} onPress={() => validateStep3() && setStep(4)}>
             <Text style={styles.buttonText}>Next</Text>
           </TouchableOpacity>
@@ -181,7 +250,7 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
         </>
-      )} */}
+      )}
 
       {step === 4 && (
         <>
@@ -189,7 +258,7 @@ const RegisterScreen = ({ navigation }) => {
           <TouchableOpacity style={styles.button} onPress={handleRegister}>
             <Text style={styles.buttonText}>Submit</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.smallButton} onPress={() => setStep(2)}>
+          <TouchableOpacity style={styles.smallButton} onPress={() => setStep(role === "user" ? 3 : 2)}>
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
         </>
@@ -214,6 +283,8 @@ const styles = StyleSheet.create({
   linkText: { marginTop: 15, color: "#007bff" },
   navigationButtons: { flexDirection: "row", justifyContent: "space-between", width: "80%" },
   smallButton: { backgroundColor: "#007bff", padding: 10, borderRadius: 10, width: "40%", alignItems: "center", marginTop: 10 },
+  roleButton: { backgroundColor: "#6c757d", padding: 15, borderRadius: 10, width: "80%", alignItems: "center", marginBottom: 10 },
+  label: { fontSize: 18, marginBottom: 10 },
 });
 
 export default RegisterScreen;

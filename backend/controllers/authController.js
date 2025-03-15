@@ -36,6 +36,7 @@ const registerUser = async (req, res) => {
   }
 };
 
+
 const login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -69,32 +70,70 @@ const login = async (req, res) => {
 
     // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
-console.log("Entered Password:", password);
-console.log("Stored Hashed Password:", user.password);
-console.log("Password Match:", isMatch);
+    console.log("Entered Password:", password);
+    console.log("Stored Hashed Password:", user.password);
+    console.log("Password Match:", isMatch);
 
     if (!isMatch) {
       return res.status(400).json({ error: "Invalid credentials." });
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: user._id, role }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign(
+      { id: user._id, role }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: "1h" }
+    );
 
-    res.json({ token, role }); // Send back token & detected role
+    res.json({ token, role, username }); // Send back token, role & username
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
 
-const approveUser = async (req, res) => {
+
+
+
+const registerAdmin = async (req, res) => {
   try {
-    const { userId } = req.params;
-    await User.findByIdAndUpdate(userId, { isApproved: true });
-    res.json({ message: "User approved successfully." });
+    const {username, email, password } = req.body;
+    console.log("🟢 Register Admin API called with data:", req.body);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const admin = new Admin({
+      username,
+      email,
+      password: hashedPassword,
+    });
+
+    await admin.save();
+    res.status(201).json({ message: "Admin registered successfully." });
   } catch (error) {
+    console.error("Admin Registration Error from backend:", error);
     res.status(400).json({ error: error.message });
   }
 };
 
-module.exports = { registerUser, login, approveUser };
+const registerCar = async (req, res) => {
+  try {
+    const { username,password } = req.body;
+    console.log("🟢 Register Car API called with data:", req.body);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const car = new Car({
+      username,
+      password: hashedPassword,
+    });
+
+    await car.save();
+    res.status(201).json({ message: "Car registered successfully." });
+  } catch (error) {
+    console.error("Car Registration Error from backend:", error);
+    res.status(400).json({ error: error.message });
+  }
+};
+
+module.exports = { registerUser, login, registerAdmin, registerCar };

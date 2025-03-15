@@ -9,10 +9,30 @@ const API_URL = "http://192.168.100.88:5000/api";
 
 export const registerUser = async (userData) => {
   try {
-    const res = await axios.post(`${API_URL}/auth/register`, userData);
+    const res = await axios.post(`${API_URL}/auth/registerUser`, userData);
     return res.data;
   } catch (error) {
     console.error("Register User Error:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const registerCar = async (carData) => {
+  try {
+    const res = await axios.post(`${API_URL}/auth/registerCar`, carData);
+    return res.data;
+  } catch (error) {
+    console.error("Register Car Error:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const registerAdmin = async (adminData) => {
+  try {
+    const res = await axios.post(`${API_URL}/auth/registerAdmin`, adminData);
+    return res.data;
+  } catch (error) {
+    console.error("Register Admin Error:", error.response?.data || error.message);
     throw error;
   }
 };

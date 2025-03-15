@@ -1,6 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { loginUser } from "../api";
+import { 
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Alert 
+} from "react-native";
+import { loginUser } from "../api"; // Ensure this is correctly imported
+import AsyncStorage from "@react-native-async-storage/async-storage"; // For token storage
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState("");
@@ -8,19 +11,57 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     try {
-      const data = await loginUser({ username, password, role });
-      Alert.alert("Login Successful", "Welcome!");
-      // Navigate to the appropriate screen based on role
+      const data = await loginUser({ username, password });
+
+      if (data.token) {
+        // Store token & role in AsyncStorage
+        await AsyncStorage.setItem("token", data.token);
+        await AsyncStorage.setItem("role", data.role);
+        await AsyncStorage.setItem("username", username);
+
+        Alert.alert("Login Successful", `Welcome, ${data.role}!`);
+
+        // Navigate to appropriate screen based on role
+        navigateToDashboard(data.role);
+      } else {
+        Alert.alert("Login Failed", data.error || "Invalid credentials.");
+      }
     } catch (error) {
-      Alert.alert("Login Failed", "Invalid credentials.");
+      Alert.alert("Login Error", "An error occurred during login.");
+    }
+  };
+
+  const navigateToDashboard = (role) => {
+    switch (role) {
+      case "admin":
+        navigation.replace("AdminDashboard");
+        break;
+      case "car":
+        navigation.replace("CarDashboard");
+        break;
+      default:
+        navigation.replace("UserHomeScreen");
+        break;
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
-      <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} />
-      <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+      <TextInput 
+        style={styles.input} 
+        placeholder="Username" 
+        value={username} 
+        onChangeText={setUsername} 
+        autoCapitalize="none"
+      />
+      <TextInput 
+        style={styles.input} 
+        placeholder="Password" 
+        secureTextEntry 
+        value={password} 
+        onChangeText={setPassword} 
+      />
       
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
