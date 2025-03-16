@@ -1,189 +1,157 @@
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from "react-native"
-import { Camera, ArrowLeft, WifiOff, Video } from "lucide-react-native"
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import axios from 'axios';
+import { ArrowLeft } from 'lucide-react-native';
 
 const CameraViews = ({ navigation }) => {
+  const [imageUri, setImageUri] = useState(null); // Store selected image URI
+  const [imageBase64, setImageBase64] = useState(null); // Store image base64 for upload
+
+
+  useEffect(() => {
+    // Request camera roll permission
+    const requestPermissions = async () => {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Permission to access media library is required!');
+      }
+    };
+  
+    requestPermissions();
+  }, []);
+  // Function to open gallery and pick an image
+  const pickImage = async () => {
+    console.log('Pick Image');
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaType.Images, // Restrict to images
+      allowsEditing: true, // Option to crop/resize the image
+      quality: 1, // High-quality image
+    });
+
+    console.log(result);
+
+    if (!result.canceled) {
+      setImageUri(result.uri); // Set the image URI for displaying
+      const base64Image = await convertUriToBase64(result.uri); // Convert URI to base64
+      setImageBase64(base64Image); // Set the base64 string
+    }
+  };
+
+  // Convert image URI to base64
+  const convertUriToBase64 = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Function to upload the selected image
+  const uploadImage = async () => {
+    if (imageBase64) {
+      try {
+        const response = await axios.post('http://localhost:3000/api/images/upload', {
+          image: imageBase64, // Send the base64 encoded image
+        });
+
+        if (response.data.imageUrl) {
+          console.log('Image uploaded to Cloudinary:', response.data.imageUrl);
+          // You can store the image URL if needed or display it
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+      }
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color="#166534" />
+    <SafeAreaView style={{ flex: 1, padding: 16 }}>
+      <ScrollView style={{ flex: 1 }}>
+        <Text>Select and upload an image from the gallery</Text>
+
+        <TouchableOpacity style={{ marginTop: 20, padding: 10, backgroundColor: '#10b981' }} onPress={pickImage}>
+          <Text style={{ color: '#fff', textAlign: 'center' }}>Select Image from Gallery</Text>
         </TouchableOpacity>
-        <Text style={styles.appTitle}>Go Drives</Text>
-        <View style={styles.headerRight} />
-      </View>
 
-      <Text style={styles.screenTitle}>Camera Views</Text>
-
-      <ScrollView style={styles.scrollContainer}>
-        <View style={styles.cameraGrid}>
-          <View style={styles.cameraCard}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Front Camera</Text>
-              <View style={styles.statusIndicator}>
-                <Video size={16} color="#10b981" />
-                <Text style={styles.statusText}>Live</Text>
-              </View>
-            </View>
-            <View style={styles.cameraView}>
-              <Camera size={48} color="#10b981" />
-              <Text style={styles.placeholderText}>Front view active</Text>
-            </View>
+        {/* Display the selected image */}
+        {imageUri && (
+          <View style={{ alignItems: 'center', marginTop: 20 }}>
+            <Text>Selected Image:</Text>
+            <Image source={{ uri: imageUri }} style={{ width: 200, height: 200, marginTop: 10 }} />
+            <TouchableOpacity style={{ marginTop: 20, padding: 10, backgroundColor: '#10b981' }} onPress={uploadImage}>
+              <Text style={{ color: '#fff', textAlign: 'center' }}>Upload Image</Text>
+            </TouchableOpacity>
           </View>
-
-          <View style={[styles.cameraCard, styles.offlineCard]}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Back Camera</Text>
-              <View style={styles.offlineIndicator}>
-                <WifiOff size={16} color="#ef4444" />
-                <Text style={styles.offlineText}>Offline</Text>
-              </View>
-            </View>
-            <View style={styles.cameraView}>
-              <Camera size={48} color="#9ca3af" />
-              <Text style={styles.placeholderText}>Connection lost</Text>
-            </View>
-          </View>
-
-          <View style={[styles.cameraCard, styles.offlineCard]}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Side 1</Text>
-              <View style={styles.offlineIndicator}>
-                <WifiOff size={16} color="#ef4444" />
-                <Text style={styles.offlineText}>Offline</Text>
-              </View>
-            </View>
-            <View style={styles.cameraView}>
-              <Camera size={48} color="#9ca3af" />
-              <Text style={styles.placeholderText}>Connection lost</Text>
-            </View>
-          </View>
-
-          <View style={[styles.cameraCard, styles.offlineCard]}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Side 2</Text>
-              <View style={styles.offlineIndicator}>
-                <WifiOff size={16} color="#ef4444" />
-                <Text style={styles.offlineText}>Offline</Text>
-              </View>
-            </View>
-            <View style={styles.cameraView}>
-              <Camera size={48} color="#9ca3af" />
-              <Text style={styles.placeholderText}>Connection lost</Text>
-            </View>
-          </View>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f0fdf4", // Light green background
+    backgroundColor: '#f0fdf4',
     padding: 16,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
     paddingTop: 12,
   },
   backButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "#dcfce7",
+    backgroundColor: '#dcfce7',
   },
   appTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "#166534", // Dark green text
+    fontWeight: 'bold',
+    color: '#166534',
   },
   headerRight: {
-    width: 40, // Balance the header
+    width: 40,
   },
   screenTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#166534",
+    fontWeight: 'bold',
+    color: '#166534',
     marginBottom: 16,
-    marginLeft: 8,
   },
   scrollContainer: {
     flex: 1,
   },
   cameraGrid: {
-    flexDirection: "column",
+    flexDirection: 'column',
     gap: 16,
   },
-  cameraCard: {
-    backgroundColor: "#dcfce7", // Very light green
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+  uploadButton: {
+    backgroundColor: '#10b981',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 20,
+    alignItems: 'center',
   },
-  offlineCard: {
-    backgroundColor: "#f1f5f9", // Light gray for offline
+  uploadButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
   },
-  cameraHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.05)",
+  uploadedImageContainer: {
+    alignItems: 'center',
+    marginTop: 16,
   },
-  cameraTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#166534",
+  uploadedImage: {
+    width: 200,
+    height: 200,
+    marginTop: 10,
   },
-  statusIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(16, 185, 129, 0.1)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#10b981",
-    marginLeft: 4,
-  },
-  offlineIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  offlineText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#ef4444",
-    marginLeft: 4,
-  },
-  cameraView: {
-    height: 180,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
-  },
-  placeholderText: {
-    marginTop: 12,
-    color: "#64748b",
-    fontSize: 14,
-  },
-})
+});
 
-export default CameraViews
-
+export default CameraViews;

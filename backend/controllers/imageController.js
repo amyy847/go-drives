@@ -7,20 +7,24 @@ const upload = multer({
   storage: multer.memoryStorage(), // Store file in memory (RAM)
 });
 
+// Upload image function
 const uploadImage = async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.body.image) {
       return res.status(400).json({ message: "No image uploaded" });
     }
 
-    // Convert buffer to Base64 format for Cloudinary upload
-    const base64Image = `data:image/jpeg;base64,${req.file.buffer.toString("base64")}`;
+    // Convert the Base64 string from the frontend into a buffer
+    const base64Image = req.body.image.split(';base64,').pop();
+    const buffer = Buffer.from(base64Image, 'base64');
 
     // Upload the image to Cloudinary
-    const uploadedResponse = await cloudinary.uploader.upload(base64Image, {
+    const uploadedResponse = await cloudinary.uploader.upload(buffer, {
       folder: "idPictures",
+      resource_type: "auto", // Automatically detect the file type (jpeg, png, etc.)
     });
 
+    // Return the URL of the uploaded image
     res.status(200).json({
       message: "Image uploaded successfully!",
       imageUrl: uploadedResponse.secure_url,
@@ -30,7 +34,6 @@ const uploadImage = async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 };
-
 
 // Export upload middleware & controller function
 module.exports = { upload, uploadImage };
