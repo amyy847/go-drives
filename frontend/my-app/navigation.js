@@ -11,6 +11,7 @@ import LidarData from './screens/LidarData';
 import RadarData from './screens/RadarData';
 import MapScreen from './screens/MapScreen';
 import PassengerData from './screens/PassengerData';
+import CarData from './screens/CarData';
 
 
 const Stack = createStackNavigator();
@@ -30,6 +31,7 @@ export default function AppNavigator() {
         <Stack.Screen name="RadarData" component={RadarData} />
         <Stack.Screen name="MapScreen" component={MapScreen} />
         <Stack.Screen name="PassengerData" component={PassengerData} />
+        <Stack.Screen name="CarData" component={CarData} />
       </Stack.Navigator>
     </NavigationContainer>
   );
