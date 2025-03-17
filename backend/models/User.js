@@ -11,7 +11,8 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   major: String,
   role: { type: String, default: "user" },
-  isApproved: { type: Boolean, default: false }
+  isApproved: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
 });
 
 module.exports = mongoose.model("User", UserSchema);
