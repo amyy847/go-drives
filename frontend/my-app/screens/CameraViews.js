@@ -1,7 +1,93 @@
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from "react-native"
-import { Camera, ArrowLeft, WifiOff, Video } from "lucide-react-native"
+import React, { useState, useRef, useEffect } from "react"
+import { 
+  View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Modal 
+} from "react-native"
+import { Camera as CameraIcon, ArrowLeft, WifiOff, Video, X } from "lucide-react-native"
+import { Camera } from "expo-camera";
+import { Dimensions } from "react-native";
+import { useCameraPermissions } from "expo-camera";
+
+
 
 const CameraViews = ({ navigation }) => {
+  const [hasPermission, setHasPermission] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const cameraRef = useRef(null);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  useEffect(() => {
+    console.log("🔍 Checking camera permissions...", permission);
+
+    if (!permission) {
+      console.warn("⚠️ Camera permission object is null. Waiting...");
+      return;
+    }
+
+    if (permission.status === "granted") {
+      console.log("✅ Camera permission granted!");
+      setHasPermission(true);
+    } else {
+      console.warn("⛔ Camera permission denied! Requesting now...");
+      requestPermission().then((newPermission) => {
+        if (newPermission?.status === "granted") {
+          console.log("✅ Camera permission granted after request!");
+          setHasPermission(true);
+        } else {
+          console.log("⛔ Camera permission still denied!");
+          setHasPermission(false);
+        }
+      });
+    }
+  }, [permission]);
+
+  const toggleFullscreen = () => {
+    console.log(`🔄 Fullscreen mode: ${!isFullscreen}`);
+    setIsFullscreen(!isFullscreen);
+  };
+
+  const renderCameraContent = () => {
+    console.log("🛠 Rendering Camera Content...");
+
+    if (hasPermission === null) {
+      return (
+        <View style={styles.cameraView}>
+          <CameraIcon size={48} color="#10b981" />
+          <Text style={styles.placeholderText}>Requesting camera access...</Text>
+        </View>
+      );
+    }
+
+    if (hasPermission === false) {
+      return (
+        <View style={styles.cameraView}>
+          <CameraIcon size={48} color="#ef4444" />
+          <Text style={styles.placeholderText}>Camera access denied</Text>
+        </View>
+      );
+    }
+
+    if (!Camera) {
+      return (
+        <View style={styles.cameraView}>
+          <Text>Error: Camera module is undefined</Text>
+        </View>
+      );
+    }
+
+    return (
+      <TouchableOpacity 
+        style={styles.cameraView} 
+        activeOpacity={0.9}
+        onPress={toggleFullscreen}
+      >
+        <Camera ref={cameraRef} style={styles.cameraPreview} type={Camera.Constants.Type.front} />
+        <View style={styles.cameraOverlay}>
+          <Text style={styles.tapToExpandText}>Tap to expand</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -24,58 +110,42 @@ const CameraViews = ({ navigation }) => {
                 <Text style={styles.statusText}>Live</Text>
               </View>
             </View>
-            <View style={styles.cameraView}>
-              <Camera size={48} color="#10b981" />
-              <Text style={styles.placeholderText}>Front view active</Text>
-            </View>
-          </View>
-
-          <View style={[styles.cameraCard, styles.offlineCard]}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Back Camera</Text>
-              <View style={styles.offlineIndicator}>
-                <WifiOff size={16} color="#ef4444" />
-                <Text style={styles.offlineText}>Offline</Text>
-              </View>
-            </View>
-            <View style={styles.cameraView}>
-              <Camera size={48} color="#9ca3af" />
-              <Text style={styles.placeholderText}>Connection lost</Text>
-            </View>
-          </View>
-
-          <View style={[styles.cameraCard, styles.offlineCard]}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Side 1</Text>
-              <View style={styles.offlineIndicator}>
-                <WifiOff size={16} color="#ef4444" />
-                <Text style={styles.offlineText}>Offline</Text>
-              </View>
-            </View>
-            <View style={styles.cameraView}>
-              <Camera size={48} color="#9ca3af" />
-              <Text style={styles.placeholderText}>Connection lost</Text>
-            </View>
-          </View>
-
-          <View style={[styles.cameraCard, styles.offlineCard]}>
-            <View style={styles.cameraHeader}>
-              <Text style={styles.cameraTitle}>Side 2</Text>
-              <View style={styles.offlineIndicator}>
-                <WifiOff size={16} color="#ef4444" />
-                <Text style={styles.offlineText}>Offline</Text>
-              </View>
-            </View>
-            <View style={styles.cameraView}>
-              <Camera size={48} color="#9ca3af" />
-              <Text style={styles.placeholderText}>Connection lost</Text>
-            </View>
+            {renderCameraContent()}
           </View>
         </View>
       </ScrollView>
+
+      {/* Fullscreen Camera Modal */}
+      {isFullscreen && (
+        <Modal
+          visible={true}
+          animationType="fade"
+          onRequestClose={toggleFullscreen}
+        >
+          <View style={styles.fullscreenContainer}>
+            {Camera ? (
+              <Camera ref={cameraRef} style={styles.fullscreenCamera} type={Camera.Constants.Type.front} />
+            ) : (
+              <Text>Error: Camera module is undefined</Text>
+            )}
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={toggleFullscreen}
+            >
+              <X size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
-  )
-}
+  );
+};
+
+
+
+
+
+const { width, height } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   container: {
@@ -177,13 +247,46 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#f8fafc",
+    position: "relative",
   },
   placeholderText: {
     marginTop: 12,
     color: "#64748b",
     fontSize: 14,
   },
+  cameraPreview: {
+    width: "100%",
+    height: "100%",
+  },
+  cameraOverlay: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  tapToExpandText: {
+    color: "#fff",
+    fontSize: 12,
+  },
+  fullscreenContainer: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  fullscreenCamera: {
+    width: width,
+    height: height,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 40,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 20,
+    padding: 8,
+  },
 })
 
 export default CameraViews
-
