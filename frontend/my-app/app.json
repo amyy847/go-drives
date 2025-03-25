@@ -13,14 +13,20 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.myapp"
+      "package": "com.anonymous.myapp",
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,8 +34,16 @@
     "permissions": [
       "CAMERA"
     ],
+    "experiments": {
+      "bridgeless": false
+    },
     "plugins": [
       "react-native-vision-camera"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "824f68a5-9f53-4e16-9f41-7ba05dd6e3d1"
+      }
+    }
   }
 }
