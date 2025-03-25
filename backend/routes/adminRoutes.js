@@ -1,7 +1,9 @@
 const express = require("express");
-const { approveUser } = require("../controllers/adminController");
+const { approveUser, rejectUser } = require("../controllers/adminController");
+
 const router = express.Router();
 
 router.put("/approve/:userId", approveUser);
+router.put("/reject/:userId", rejectUser);
 
 module.exports = router;
