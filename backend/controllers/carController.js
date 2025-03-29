@@ -46,3 +46,30 @@ exports.deactivateCar = async (req, res) => {
         res.status(500).json({ error: 'Error deactivating car' });
     }
 };
+
+// Activate a car (set status to "active")
+exports.activateCar = async (req, res) => {
+    try {
+        const car = await Car.findByIdAndUpdate(req.params.id, { isActive: 'true' }, { new: true });
+        if (!car) return res.status(404).json({ error: 'Car not found' });
+        res.status(200).json(car);
+    } catch (error) {
+        res.status(500).json({ error: 'Error activating car' });
+    }
+};
+
+// Save the current location of a car
+exports.saveCarLocation = async (req, res) => {
+    try {
+        const { latitude, longitude } = req.body;
+        const car = await Car.findByIdAndUpdate(
+            req.params.id,
+            { currentLocation: { latitude, longitude } },
+            { new: true }
+        );
+        if (!car) return res.status(404).json({ error: 'Car not found' });
+        res.status(200).json(car);
+    } catch (error) {
+        res.status(500).json({ error: 'Error saving car location' });
+    }
+};

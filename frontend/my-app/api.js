@@ -1,11 +1,14 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-    baseURL: "http://192.168.8.102:5000/api", // Replace with your correct IP
+    // baseURL: "http://192.168.8.102:5000/api", // hanas ip
+    baseURL: "http://192.168.100.88", //amys ip
     timeout: 30000, // 30 seconds timeout
 });
 
-const API_URL = "http://192.168.8.102:5000/api"; // Update this too!
+// const API_URL = "http://192.168.8.102:5000/api"; // hana
+const API_URL = "http://192.168.100.88:5000/api"; // amy
+
 
 export const registerUser = async (userData) => {
     try {
@@ -42,7 +45,7 @@ export const loginUser = async (credentials) => {
         const res = await axios.post(`${API_URL}/auth/login`, credentials);
         return res.data;
     } catch (error) {
-        console.error("Login User Error:", error.response?.data || error.message);
+        console.error("Login Error:", error.response?.data || error.message);
         throw error;
     }
 };

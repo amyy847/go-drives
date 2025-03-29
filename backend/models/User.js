@@ -6,7 +6,7 @@ const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   gucEmail: { type: String, required: true, unique: true },
   phoneNumber: String,
-  idNumber: String,
+  idNumber: { type: String, required: true, unique: true },
   idPicture: String, // Cloudinary URL
   password: { type: String, required: true },
   major: String,

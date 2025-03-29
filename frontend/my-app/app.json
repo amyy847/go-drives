@@ -23,19 +23,10 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.myapp",
-      "permissions": [
-        "android.permission.CAMERA"
-      ]
+      "package": "com.anonymous.myapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "permissions": [
-      "CAMERA"
-    ],
-    "experiments": {
-      "bridgeless": false
     },
     "plugins": [
       "react-native-vision-camera"

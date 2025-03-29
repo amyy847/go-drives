@@ -1,159 +1,20 @@
-// import React, { useState, useEffect } from 'react';
-// import { View, Text, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
-// import MapView, { PROVIDER_DEFAULT, Marker, UrlTile } from 'react-native-maps';
-// import Geolocation from 'react-native-geolocation-service';
-// import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-
-// const MapScreen = () => {
-//   const [location, setLocation] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-
-//   useEffect(() => {
-//     requestLocationPermission();
-//   }, []);
-
-//   const requestLocationPermission = async () => {
-//     try {
-//       const permission = Platform.OS === 'ios' 
-//         ? PERMISSIONS.IOS.LOCATION_WHEN_IN_USE 
-//         : PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION;
-      
-//       const permissionStatus = await check(permission);
-      
-//       if (permissionStatus === RESULTS.GRANTED) {
-//         getCurrentLocation();
-//       } else {
-//         const result = await request(permission);
-//         if (result === RESULTS.GRANTED) {
-//           getCurrentLocation();
-//         } else {
-//           setError('Location permission denied');
-//           setLoading(false);
-//         }
-//       }
-//     } catch (err) {
-//       console.error('Error checking location permission:', err);
-//       setError('Failed to request location permission');
-//       setLoading(false);
-//     }
-//   };
-
-//   const getCurrentLocation = () => {
-//     Geolocation.getCurrentPosition(
-//       (position) => {
-//         const { latitude, longitude } = position.coords;
-//         setLocation({
-//           latitude,
-//           longitude,
-//           latitudeDelta: 0.0922,
-//           longitudeDelta: 0.0421,
-//         });
-//         setLoading(false);
-//       },
-//       (err) => {
-//         console.error('Error getting current location:', err);
-//         setError('Failed to get current location');
-//         setLoading(false);
-//       },
-//       { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-//     );
-//   };
-
-//   if (loading) {
-//     return (
-//       <View style={styles.centerContainer}>
-//         <ActivityIndicator size="large" color="#166534" />
-//         <Text style={styles.loadingText}>Getting your location...</Text>
-//       </View>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <View style={styles.centerContainer}>
-//         <Text style={styles.errorText}>{error}</Text>
-//       </View>
-//     );
-//   }
-
-//   return (
-//     <View style={styles.container}>
-//       {location ? (
-//         <MapView
-//           style={styles.map}
-//           provider={PROVIDER_DEFAULT}
-//           initialRegion={location}
-//           showsUserLocation={true}
-//           showsMyLocationButton={true}
-//         >
-//           {/* OpenStreetMap Tile Overlay */}
-//           <UrlTile
-//             urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
-//             maximumZ={19}
-//             flipY={false}
-//           />
-//           <Marker
-//             coordinate={{
-//               latitude: location.latitude,
-//               longitude: location.longitude,
-//             }}
-//             title="You are here"
-//             description="Your current location"
-//           />
-//         </MapView>
-//       ) : (
-//         <View style={styles.centerContainer}>
-//           <Text style={styles.errorText}>Unable to get location</Text>
-//         </View>
-//       )}
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//   },
-//   map: {
-//     ...StyleSheet.absoluteFillObject,
-//   },
-//   centerContainer: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     padding: 20,
-//   },
-//   loadingText: {
-//     marginTop: 10,
-//     fontSize: 16,
-//     color: '#166534',
-//   },
-//   errorText: {
-//     fontSize: 16,
-//     color: '#ef4444',
-//     textAlign: 'center',
-//   },
-// });
-
-// export default MapScreen;
-
-
-
-
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Alert, Platform, Button } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, Button } from "react-native";
 import MapView, { Marker, UrlTile, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
-import MapViewDirections from "react-native-maps-directions";
+import axios from "axios";
 
-const GOOGLE_MAPS_APIKEY = "YOUR_GOOGLE_MAPS_API_KEY"; // Replace with your API key
+const OPENROUTE_API_KEY = "5b3ce3597851110001cf6248b7dbbb8563cf409e898a5fa7e374febe";
 
 const MapScreen = () => {
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [destination, setDestination] = useState(null);
+  const [destination, setDestination] = useState({
+    latitude: 29.98698645034215, // Replace with actual coordinates
+    longitude: 31.441710575756055,
+  });
+  const [route, setRoute] = useState([]);
 
   useEffect(() => {
     requestLocationPermission();
@@ -166,43 +27,58 @@ const MapScreen = () => {
       setLoading(false);
       return;
     }
-    getCurrentLocation();
+    startTrackingLocation();
   };
 
-  const getCurrentLocation = async () => {
-    let userLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    setLocation({
-      latitude: userLocation.coords.latitude,
-      longitude: userLocation.coords.longitude,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    });
-    setLoading(false);
-  };
+  const startTrackingLocation = async () => {
+    let subscription = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+      (newLocation) => {
+        setLocation({
+          latitude: newLocation.coords.latitude,
+          longitude: newLocation.coords.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        });
 
-  const generateRandomDestination = () => {
-    if (!location) return;
-    const earthRadius = 6371; // Radius of the Earth in km
-    const distance = 12 / earthRadius; // 12 km in radians
-    const bearing = Math.random() * 2 * Math.PI; // Random direction
-
-    const lat1 = (location.latitude * Math.PI) / 180;
-    const lon1 = (location.longitude * Math.PI) / 180;
-
-    const lat2 = Math.asin(
-      Math.sin(lat1) * Math.cos(distance) + Math.cos(lat1) * Math.sin(distance) * Math.cos(bearing)
+        fetchOptimizedRoute({
+          latitude: newLocation.coords.latitude,
+          longitude: newLocation.coords.longitude,
+        });
+      }
     );
-    const lon2 =
-      lon1 +
-      Math.atan2(
-        Math.sin(bearing) * Math.sin(distance) * Math.cos(lat1),
-        Math.cos(distance) - Math.sin(lat1) * Math.sin(lat2)
+
+    setLoading(false);
+    return () => subscription.remove(); // Stop tracking when component unmounts
+  };
+
+  const fetchOptimizedRoute = async (currentLocation) => {
+    if (!currentLocation) {
+      setError("Current location not available");
+      return;
+    }
+
+    try {
+      console.log("Fetching optimized route...");
+      console.log(`Start: ${currentLocation.latitude}, ${currentLocation.longitude}`);
+      console.log(`End: ${destination.latitude}, ${destination.longitude}`);
+
+      const response = await axios.get(
+        `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${OPENROUTE_API_KEY}&start=${currentLocation.longitude},${currentLocation.latitude}&end=${destination.longitude},${destination.latitude}`
       );
 
-    setDestination({
-      latitude: (lat2 * 180) / Math.PI,
-      longitude: (lon2 * 180) / Math.PI,
-    });
+      console.log("Route API Response:", response.data);
+
+      const coordinates = response.data.features[0].geometry.coordinates.map((coord) => ({
+        latitude: coord[1],
+        longitude: coord[0],
+      }));
+
+      setRoute(coordinates);
+    } catch (err) {
+      console.error("Error fetching route:", err);
+      setError("Failed to get optimized route");
+    }
   };
 
   if (loading) {
@@ -225,44 +101,53 @@ const MapScreen = () => {
   return (
     <View style={styles.container}>
       {location && (
-        <MapView
-          style={styles.map}
-          initialRegion={location}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-        >
+        <MapView style={styles.map} region={location} showsUserLocation={true}>
           <UrlTile urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} />
 
           <Marker coordinate={location} title="You are here" description="Your current location" />
 
-          {destination && <Marker coordinate={destination} title="Destination" description="Random 12km away" />}
+          <Marker coordinate={destination} title="Destination" description="Optimized destination" />
 
-          {destination && (
-            <MapViewDirections
-              origin={location}
-              destination={destination}
-              apikey={GOOGLE_MAPS_APIKEY}
-              strokeWidth={4}
-              strokeColor="blue"
-            />
-          )}
+          {route.length > 0 && <Polyline coordinates={route} strokeWidth={4} strokeColor="blue" />}
         </MapView>
       )}
 
       <View style={styles.buttonContainer}>
-        <Button title="Start Journey" onPress={generateRandomDestination} color="#166534" />
+        <Button title="Start Journey" onPress={() => fetchOptimizedRoute(location)} color="#166534" />
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { ...StyleSheet.absoluteFillObject },
-  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
-  loadingText: { marginTop: 10, fontSize: 16, color: "#166534" },
-  errorText: { fontSize: 16, color: "#ef4444", textAlign: "center" },
-  buttonContainer: { position: "absolute", bottom: 20, alignSelf: "center", backgroundColor: "white", padding: 10, borderRadius: 10, elevation: 5 },
+  container: {
+    flex: 1,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#166534",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#ef4444",
+    textAlign: "center",
+  },
+  buttonContainer: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+  },
 });
 
 export default MapScreen;

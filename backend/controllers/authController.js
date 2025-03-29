@@ -51,9 +51,6 @@ const login = async (req, res) => {
       user = await User.findOne({ username });
       if (user) {
         role = "user";
-        if (!user.isApproved) {
-          return res.status(403).json({ error: "User not approved by admin." });
-        }
       } else {
         // Search in Car collection
         user = await Car.findOne({ username });
@@ -85,8 +82,14 @@ const login = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    res.json({ token, role, username }); // Send back token, role & username
-  } catch (error) {
+    res.json({
+      token,
+      role,
+      username,
+      isApproved: user.isApproved ?? null,
+      isActive: user.isActive ?? null
+    });
+      } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
