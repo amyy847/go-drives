@@ -34,7 +34,6 @@ const LoginScreen = ({ navigation }) => {
 
     try {
       const data = await loginUser({ username, password })
-      console.log(data);
 
       if (data.token) {
         // Check if user is approved
@@ -54,7 +53,7 @@ const LoginScreen = ({ navigation }) => {
           await AsyncStorage.setItem("username", username)
 
           // Navigate to appropriate screen based on role
-          navigateToDashboard(data.role)
+          navigateToDashboard(data.role, data) // Pass car data here
         }
       } else {
         Alert.alert("Login Failed", data.error || "Invalid credentials.")
@@ -67,13 +66,13 @@ const LoginScreen = ({ navigation }) => {
     }
   }
 
-  const navigateToDashboard = (role) => {
+  const navigateToDashboard = (role, carData) => {
     switch (role) {
       case "admin":
         navigation.replace("AdminDashboard")
         break
       case "car":
-        navigation.replace("CarDashboard")
+        navigation.replace("CarDashboard", { carData }) // Pass car data as a parameter
         break
       default:
         navigation.replace("UserHomeScreen")

@@ -8,6 +8,7 @@ const CarSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   numberOfPassengers: { type: Number },
   batteryLevel: { type: Number },
+  currentSpeed: { type: Number },
   currentLocation: {
     latitude: { type: Number },
     longitude: { type: Number },
@@ -17,11 +18,14 @@ const CarSchema = new mongoose.Schema({
       latitude: { type: Number },
       longitude: { type: Number },
     },
+    secondLocation:{
+      latitude: { type: Number },
+      longitude: { type: Number },
+    },
     endLocation: {
       latitude: { type: Number },
       longitude: { type: Number },
     }, 
-    //list of locations so we follow the optimized route hana creates
   },
   currentDestination: {
     latitude: { type: Number },

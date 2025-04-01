@@ -28,7 +28,7 @@ exports.getCarById = async (req, res) => {
 // Approve a car (set status to "active")
 exports.approveCar = async (req, res) => {
     try {
-        const car = await Car.findByIdAndUpdate(req.params.id, { status: 'active' }, { new: true });
+        const car = await Car.findByIdAndUpdate(req.params.id, { isApproved: true }, { new: true });
         if (!car) return res.status(404).json({ error: 'Car not found' });
         res.status(200).json(car);
     } catch (error) {
@@ -39,7 +39,7 @@ exports.approveCar = async (req, res) => {
 // Deactivate a car (set status to "inactive")
 exports.deactivateCar = async (req, res) => {
     try {
-        const car = await Car.findByIdAndUpdate(req.params.id, { status: 'inactive' }, { new: true });
+        const car = await Car.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
         if (!car) return res.status(404).json({ error: 'Car not found' });
         res.status(200).json(car);
     } catch (error) {
@@ -50,7 +50,7 @@ exports.deactivateCar = async (req, res) => {
 // Activate a car (set status to "active")
 exports.activateCar = async (req, res) => {
     try {
-        const car = await Car.findByIdAndUpdate(req.params.id, { isActive: 'true' }, { new: true });
+        const car = await Car.findByIdAndUpdate(req.params.id, { isActive: true }, { new: true });
         if (!car) return res.status(404).json({ error: 'Car not found' });
         res.status(200).json(car);
     } catch (error) {
@@ -61,15 +61,27 @@ exports.activateCar = async (req, res) => {
 // Save the current location of a car
 exports.saveCarLocation = async (req, res) => {
     try {
-        const { latitude, longitude } = req.body;
+        const { currentLocation } = req.body;
+        console.log("Received location:", currentLocation.latitude, currentLocation.longitude);
         const car = await Car.findByIdAndUpdate(
             req.params.id,
-            { currentLocation: { latitude, longitude } },
+            { currentLocation: { latitude:currentLocation.latitude, longitude:currentLocation.longitude } },
             { new: true }
         );
         if (!car) return res.status(404).json({ error: 'Car not found' });
         res.status(200).json(car);
     } catch (error) {
         res.status(500).json({ error: 'Error saving car location' });
+    }
+};
+
+//get the current route of the car
+exports.getCarRoute = async (req, res) => {
+    try {
+        const car = await Car.findById(req.params.id);
+        if (!car) return res.status(404).json({ error: 'Car not found' });
+        res.status(200).json(car.currentRoute);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching car route' });
     }
 };

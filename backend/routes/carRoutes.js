@@ -8,6 +8,7 @@ router.put('/:id/approve', CarController.approveCar);
 router.put('/:id/deactivate', CarController.deactivateCar);
 router.put('/:id/activate', CarController.activateCar);
 router.put('/:id/location', CarController.saveCarLocation);
+router.get('/:id/route', CarController.getCarRoute);
 
 
 module.exports = router;

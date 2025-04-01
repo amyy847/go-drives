@@ -191,7 +191,8 @@ const AdminDashboard = ({ navigation }) => {
       if (response.ok) {
         fetchCars()
         if (selectedCar && selectedCar._id === carId) {
-          fetchCarById(carId) // Refresh detail view if open
+          fetchCarById(carId)
+          console.log(response?.data);
         }
       }
     } catch (error) {

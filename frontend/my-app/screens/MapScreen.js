@@ -4,17 +4,22 @@ import MapView, { Marker, UrlTile, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
 import axios from "axios";
 
-const OPENROUTE_API_KEY = "5b3ce3597851110001cf6248b7dbbb8563cf409e898a5fa7e374febe";
+const API_BASE_URL = "http://192.168.100.88:5000/api/car";
 
-const MapScreen = () => {
+const MapScreen = ({ route }) => {
+  const { fetchedCarData } = route.params || {};
+  console.log("Car data in MapScreen:", fetchedCarData);
+  const carId = fetchedCarData?._id;
+
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [journeyStarted, setJourneyStarted] = useState(false);
   const [destination, setDestination] = useState({
-    latitude: 29.98698645034215, // Replace with actual coordinates
-    longitude: 31.441710575756055,
+    latitude: fetchedCarData?.currentDestination?.latitude || 29.98698645034215,
+    longitude: fetchedCarData?.currentDestination?.longitude || 31.441710575756055,
   });
-  const [route, setRoute] = useState([]);
+  const [carRoute, setCarRoute] = useState([]);
 
   useEffect(() => {
     requestLocationPermission();
@@ -33,48 +38,75 @@ const MapScreen = () => {
   const startTrackingLocation = async () => {
     let subscription = await Location.watchPositionAsync(
       { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
-      (newLocation) => {
-        setLocation({
+      async (newLocation) => {
+        const currentLocation = {
           latitude: newLocation.coords.latitude,
           longitude: newLocation.coords.longitude,
+        };
+
+        setLocation({
+          ...currentLocation,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         });
 
-        fetchOptimizedRoute({
-          latitude: newLocation.coords.latitude,
-          longitude: newLocation.coords.longitude,
-        });
+        await sendLocationToAPI(currentLocation);
       }
     );
-
     setLoading(false);
-    return () => subscription.remove(); // Stop tracking when component unmounts
+    return () => subscription.remove();
   };
 
-  const fetchOptimizedRoute = async (currentLocation) => {
-    if (!currentLocation) {
-      setError("Current location not available");
-      return;
+  const sendLocationToAPI = async (currentLocation) => {
+    try {
+      await axios.put(`${API_BASE_URL}/${carId}/location`, { currentLocation });
+      console.log("Location sent to API:", currentLocation);
+    } catch (err) {
+      console.error("Error sending location:", err);
     }
+  };
+
+  const fetchCarRouteFromAPI = async () => {
+    if (journeyStarted) return; // Prevent multiple calls
+
+    setJourneyStarted(true);
+    console.log("Fetching car route...");
 
     try {
-      console.log("Fetching optimized route...");
-      console.log(`Start: ${currentLocation.latitude}, ${currentLocation.longitude}`);
-      console.log(`End: ${destination.latitude}, ${destination.longitude}`);
-
-      const response = await axios.get(
-        `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${OPENROUTE_API_KEY}&start=${currentLocation.longitude},${currentLocation.latitude}&end=${destination.longitude},${destination.latitude}`
-      );
-
+      const response = await axios.get(`${API_BASE_URL}/${carId}/route`);
       console.log("Route API Response:", response.data);
 
-      const coordinates = response.data.features[0].geometry.coordinates.map((coord) => ({
-        latitude: coord[1],
-        longitude: coord[0],
-      }));
+      const { startLocation, secondLocation, endLocation } = response.data || {};
 
-      setRoute(coordinates);
+      // Validate coordinates
+      const isValidCoordinate = (coord) =>
+        coord && typeof coord.latitude === "number" && typeof coord.longitude === "number";
+
+      console.log("Validating coordinates...");
+
+      if (!isValidCoordinate(startLocation)) {
+        console.error("Invalid startLocation:", startLocation);
+        setError("Invalid start location data");
+        return;
+      }
+      if (!isValidCoordinate(secondLocation)) {
+        console.error("Invalid secondLocation:", secondLocation);
+        setError("Invalid second location data");
+        return;
+      }
+      if (!isValidCoordinate(endLocation)) {
+        console.error("Invalid endLocation:", endLocation);
+        setError("Invalid end location data");
+        return;
+      }
+
+      console.log("All coordinates are valid!");
+
+      setCarRoute([
+        { latitude: startLocation.latitude, longitude: startLocation.longitude },
+        { latitude: secondLocation.latitude, longitude: secondLocation.longitude },
+        { latitude: endLocation.latitude, longitude: endLocation.longitude },
+      ]);
     } catch (err) {
       console.error("Error fetching route:", err);
       setError("Failed to get optimized route");
@@ -105,49 +137,26 @@ const MapScreen = () => {
           <UrlTile urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} />
 
           <Marker coordinate={location} title="You are here" description="Your current location" />
-
           <Marker coordinate={destination} title="Destination" description="Optimized destination" />
 
-          {route.length > 0 && <Polyline coordinates={route} strokeWidth={4} strokeColor="blue" />}
+          {carRoute.length > 0 && <Polyline coordinates={carRoute} strokeWidth={4} strokeColor="blue" />}
         </MapView>
       )}
 
       <View style={styles.buttonContainer}>
-        <Button title="Start Journey" onPress={() => fetchOptimizedRoute(location)} color="#166534" />
+        <Button title="Start Journey" onPress={fetchCarRouteFromAPI} color="#166534" />
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#166534",
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#ef4444",
-    textAlign: "center",
-  },
-  buttonContainer: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-  },
+  container: { flex: 1 },
+  map: { ...StyleSheet.absoluteFillObject },
+  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
+  loadingText: { marginTop: 10, fontSize: 16, color: "#166534" },
+  errorText: { fontSize: 16, color: "#ef4444", textAlign: "center" },
+  buttonContainer: { position: "absolute", bottom: 20, left: 20, right: 20 },
 });
 
 export default MapScreen;

@@ -87,7 +87,8 @@ const login = async (req, res) => {
       role,
       username,
       isApproved: user.isApproved ?? null,
-      isActive: user.isActive ?? null
+      isActive: user.isActive ?? null,
+      id: user._id,
     });
       } catch (error) {
     res.status(500).json({ error: error.message });

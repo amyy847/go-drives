@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from "react-native"
+import { useEffect, useState } from "react"
 import {
   Battery,
   Navigation,
@@ -12,12 +13,34 @@ import {
   AlertTriangle,
 } from "lucide-react-native"
 
-const CarDashboard = ({ navigation }) => {
-  // Sample data - in a real app, this would come from props or state
-  const batteryLevel = 78
-  const currentSpeed = 65
-  const nextStop = "Central Station"
-  const minutesToNextStop = 12
+const CarDashboard = ({ navigation, route }) => {
+  const { carData } = route.params // Retrieve car data from route params
+  console.log("Car data from route:", carData)
+  const [fetchedCarData, setFetchedCarData] = useState(null)
+
+  useEffect(() => {
+    const fetchCarData = async () => {
+      try {
+        const response = await fetch(`http://192.168.100.88:5000/api/car/${carData.id}`)
+        const data = await response.json()
+        console.log("Fetched car data:", data)
+        setFetchedCarData(data)
+      } catch (error) {
+        console.error("Error fetching car data:", error)
+      }
+    }
+
+    if (carData?.id) {
+      fetchCarData()
+    }
+  }, [])
+
+  console.log("Fetched car data:", fetchedCarData)
+
+  const batteryLevel = fetchedCarData?.batteryLevel || 78
+  const currentSpeed = fetchedCarData?.currentSpeed || 65
+  const nextStop = fetchedCarData?.nextStop || "Central Station"
+  const minutesToNextStop = fetchedCarData?.minutesToNextStop || 12
 
   return (
     <SafeAreaView style={styles.container}>
@@ -55,7 +78,7 @@ const CarDashboard = ({ navigation }) => {
           <Text style={styles.navButtonText}>Lidar Data</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate("CarData")}>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate("CarData",{ fetchedCarData })}>
           <Activity size={28} color="#ffffff" />
           <Text style={styles.navButtonText}>Car Data</Text>
         </TouchableOpacity>
@@ -65,17 +88,17 @@ const CarDashboard = ({ navigation }) => {
           <Text style={styles.navButtonText}>Radar Data</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate("PassengerData")}>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate("PassengerData",{ fetchedCarData })}>
           <Users size={28} color="#ffffff" />
           <Text style={styles.navButtonText}>Passenger Data</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate("CameraViews")}>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate("CameraViews",{ fetchedCarData })}>
           <Camera size={28} color="#ffffff" />
           <Text style={styles.navButtonText}>Camera Views</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate("MapScreen")}>
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate("MapScreen", { fetchedCarData })}>
           <Navigation size={28} color="#ffffff" />
           <Text style={styles.navButtonText}>Map Screen</Text>
         </TouchableOpacity>
